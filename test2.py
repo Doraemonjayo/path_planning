@@ -2,10 +2,14 @@ import PathPlanner
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, FFMpegWriter
 import numpy as np
+import platform
 
 dt = 0.02
 num_robots = 100  # ロボットの数
 num_frames = 300  # 録画するフレーム数
+
+# 録画するかどうかのフラグ
+record_video = True  # Trueにすると録画、Falseにすると録画しない
 
 # ロボットの状態を保持するリスト
 robots = [(np.random.uniform(-5, 15), np.random.uniform(-5, 15)) for _ in range(num_robots)]
@@ -28,13 +32,13 @@ def update(frame):
     for i, robot in enumerate(robots):
         v = path.calcVelocity(robot)
         robots[i] = (robot[0] + v[0] * dt, robot[1] + v[1] * dt)
-        
+
         # ロボットの位置を更新
         robot_points[i].set_data(*robots[i])
 
     return robot_points
 
-path = PathPlanner.Path(((0,0),(10,0),(10,5),(0,5),(0,10),(10,10)), 10, 10)
+path = PathPlanner.Path(((0, 0), (10, 0), (10, 5), (0, 5), (0, 10), (10, 10)), 10, 10)
 
 x = []
 y = []
@@ -69,16 +73,22 @@ ax.set_ylim(-5, 15)
 # キーボード入力イベントを登録
 fig.canvas.mpl_connect('key_press_event', on_key)
 
-# FFMpegWriterを使用してアニメーションを保存
-writer = FFMpegWriter(fps=int(1 / dt))
+# OS判定して動画ライターを選択
+if platform.system() == 'Windows':
+    # WindowsでFFmpegWriterを使うためにffmpegをインストールしている必要があります
+    writer = FFMpegWriter(fps=int(1 / dt))
+else:
+    # LinuxでもFFMpegWriterを使用
+    writer = FFMpegWriter(fps=int(1 / dt))
 
 # アニメーション作成
 ani = FuncAnimation(fig, update, frames=num_frames, interval=dt * 1000, blit=True)
 
-# 動画を保存する
-ani.save("robots_animation.mp4", writer=writer)
+# 録画フラグがTrueの場合にのみ動画を保存
+if record_video:
+    ani.save("robots_animation.mp4", writer=writer)
+    # 動画保存完了メッセージ
+    print("Animation saved as 'robots_animation.mp4'.")
 
-# 動画保存完了メッセージ
-print("Animation saved as 'robots_animation.mp4'.")
-
+# プロットを表示
 plt.show()
