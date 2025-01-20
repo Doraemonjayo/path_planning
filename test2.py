@@ -5,11 +5,11 @@ import numpy as np
 import platform
 
 dt = 0.02
-num_robots = 100  # ロボットの数
+num_robots = 10  # ロボットの数
 num_frames = 300  # 録画するフレーム数
 
 # 録画するかどうかのフラグ
-record_video = True  # Trueにすると録画、Falseにすると録画しない
+record_video = False  # Trueにすると録画、Falseにすると録画しない
 
 # ロボットの状態を保持するリスト
 robots = [(np.random.uniform(-5, 15), np.random.uniform(-5, 15)) for _ in range(num_robots)]
@@ -38,7 +38,7 @@ def update(frame):
 
     return robot_points
 
-path = PathPlanner.Path(((0, 0), (10, 0), (10, 5), (0, 5), (0, 10), (10, 10)), 10, 10)
+path = PathPlanner.Path(((0, 0), (10, 0), (10, 5), (0, 5), (0, 10), (10, 10)), 10, 100)
 
 x = []
 y = []

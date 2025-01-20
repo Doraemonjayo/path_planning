@@ -34,7 +34,7 @@ def update(frame):
 
     return arrow_v_forward, arrow_v_lateral, arrow_v, r
 
-path = PathPlanner.Path(((0,0),(10,0),(10,5),(0,5),(0,10),(10,10)), 5, 5)
+path = PathPlanner.Path(((0,0),(10,0),(10,5),(0,5),(0,10),(10,10)), 5, 25)
 
 x = []
 y = []
