@@ -4,6 +4,7 @@ from matplotlib.animation import FuncAnimation, FFMpegWriter
 import numpy as np
 import platform
 
+
 dt = 0.02
 num_robots = 10  # ロボットの数
 num_frames = 300  # 録画するフレーム数
