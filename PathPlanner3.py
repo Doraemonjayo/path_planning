@@ -1,8 +1,10 @@
 import numpy as np
 
 class StraightPath:
-    def __init__(self, startPoint : tuple[float, float], endPoint : tuple[float, float], startVelocity : float, endVelocity : float) -> None:
+    def __init__(self, startPoint : tuple[float, float], endPoint : tuple[float, float], startVelocity : float, endVelocity : float, angle : float) -> None:
         
+        self.angle = angle
+
         self.startPoint = np.array(startPoint)
         self.endPoint = np.array(endPoint)
 
@@ -50,7 +52,10 @@ class StraightPath:
         
 
 class CornerPath:
-    def __init__(self, cornerPoint : tuple[float, float], startVector : tuple[float, float], endVector : tuple[float, float], velocity : float, acceleration : float) -> None:
+    def __init__(self, cornerPoint : tuple[float, float], startVector : tuple[float, float], endVector : tuple[float, float], velocity : float, acceleration : float, angle : float) -> None:
+
+        self.angle = angle
+
         self.cornerPoint = np.array(cornerPoint)
         self.startVector = np.array(startVector)
         self.endVector = np.array(endVector)
@@ -115,7 +120,8 @@ class CornerPath:
             return None
         
 class PointPath:
-    def __init__(self, point : tuple[float, float], velocity : tuple[float, float]) -> None:
+    def __init__(self, point : tuple[float, float], velocity : tuple[float, float], angle : float) -> None:
+        self.angle = angle
         self.point = np.array(point)
         self.velocity = np.array(velocity)
         self.duration = 0
@@ -142,9 +148,22 @@ class PointPath:
             return None
         
 class Path:
-    def __init__(self, pointsAndVelocities : tuple[tuple[tuple[float, float], float], ...], maxVelocity : float, maxAcceleration : float, maxLateralAcceleration : float) -> None:
+    def __init__(self, pointsAndVelocities : tuple[tuple[tuple[float, float], float, float], ...], maxVelocity : float, maxAcceleration : float, maxLateralAcceleration : float) -> None:
+        """
+        Path
+        ----
+        
+        Path(
+            (((px, py), velocity, angle), ...),
+            maxVelocity,
+            maxAcceleration,
+            maxLateralAcceleration
+        )
+        
+        """
         self.points = np.array([_[0] for _ in pointsAndVelocities])
         self.velocities = np.array([_[1] for _ in pointsAndVelocities])
+        self.angles = np.array([_[2] for _ in pointsAndVelocities])
         self.maxVelocity = maxVelocity
         self.maxAcceleration = maxAcceleration
         self.maxLateralAcceleration = maxLateralAcceleration
@@ -156,12 +175,12 @@ class Path:
         vector1 = self.points[2] - self.points[1]
         vector1 = vector1 / np.linalg.norm(vector1)
 
-        self.paths.append(PointPath(self.points[0], self.velocities[0] * vector0))
+        self.paths.append(PointPath(self.points[0], self.velocities[0] * vector0, self.angles[0]))
 
         cutLength0 = 0
-        corner = CornerPath(self.points[1], vector0, vector1, self.velocities[1], self.maxAcceleration)
+        corner = CornerPath(self.points[1], vector0, vector1, self.velocities[1], self.maxAcceleration, self.angles[1])
         cutLength1 = corner.cutLength
-        self.paths.append(StraightPath(self.points[0] + cutLength0 * vector0, self.points[1] - cutLength1 * vector0, self.velocities[0], self.velocities[1]))
+        self.paths.append(StraightPath(self.points[0] + cutLength0 * vector0, self.points[1] - cutLength1 * vector0, self.velocities[0], self.velocities[1], self.angles[1]))
         self.paths.append(corner)
 
         for i in range(2, self.points.shape[0] - 1):
@@ -169,22 +188,24 @@ class Path:
             vector1 = self.points[i + 1] - self.points[i]
             vector1 = vector1 / np.linalg.norm(vector1)
             cutLength0 = cutLength1
-            corner = CornerPath(self.points[i], vector0, vector1, self.velocities[i], self.maxAcceleration)
+            corner = CornerPath(self.points[i], vector0, vector1, self.velocities[i], self.maxAcceleration, self.angles[i])
             cutLength1 = corner.cutLength
-            self.paths.append(StraightPath(self.points[i - 1] + cutLength0 * vector0, self.points[i] - cutLength1 * vector0, self.velocities[i - 1], self.velocities[i]))
+            self.paths.append(StraightPath(self.points[i - 1] + cutLength0 * vector0, self.points[i] - cutLength1 * vector0, self.velocities[i - 1], self.velocities[i], self.angles[i]))
             self.paths.append(corner)
 
         vector0 = vector1
-        self.paths.append(StraightPath(self.points[-2] + cutLength0 * vector0, self.points[-1], self.velocities[-2], self.velocities[-1]))
-        self.paths.append(PointPath(self.points[-1], self.velocities[-1] * vector0))
+        self.paths.append(StraightPath(self.points[-2] + cutLength0 * vector0, self.points[-1], self.velocities[-2], self.velocities[-1], self.angles[-1]))
+        self.paths.append(PointPath(self.points[-1], self.velocities[-1] * vector0, self.angles[-1]))
 
         self.forwardVelocity = np.array((0, 0))
         self.lateralVelocity = np.array((0, 0))
+        self.target_angle = 0
 
     def calcVelocity(self, point : tuple[float, float]) -> tuple[float, float]:
         min_dist = np.inf
         forwardVelocity = np.array((0, 0))
         lateralVelocity = np.array((0, 0))
+        target_angle = 0
         
         for path in self.paths:
             time = path.pointToTime(point)
@@ -198,6 +219,7 @@ class Path:
                         forwardVelocity = np.array(v)
                         lateralVelocity = np.array(p) - np.array(point)
                         lateralVelocity = (lateralVelocity / np.linalg.norm(lateralVelocity)) if np.linalg.norm(lateralVelocity) != 0 else np.array((0,0))
+                        target_angle = path.angle
 
         lateralVelocity = lateralVelocity * min((self.maxVelocity, np.sqrt(2 * self.maxLateralAcceleration * min_dist)))
         forwardVelocitySize = np.linalg.norm(forwardVelocity)
@@ -211,7 +233,25 @@ class Path:
 
         output = forwardVelocity + lateralVelocity
 
+        self.target_angle = target_angle
+
         if np.linalg.norm(output) > self.maxVelocity:
             output = output / np.linalg.norm(output) * self.maxVelocity
 
         return tuple(output)
+    
+def calcAngularVelocity(target_angle : float, feedback_angle : float, feedback_angular_velocity : float, max_angular_velocity, max_angular_acceleration : float, dt : float) -> float:
+    delta_angle = target_angle - feedback_angle
+    delta_angle = (delta_angle + np.pi) % (2 * np.pi) - np.pi
+
+    if delta_angle > 0:
+        velocity = min((max_angular_velocity, np.sqrt(2 * (max_angular_acceleration / 4) * delta_angle)))
+    else:
+        velocity = -min((max_angular_velocity, np.sqrt(2 * (max_angular_acceleration / 4) * -delta_angle)))
+
+    if velocity - feedback_angular_velocity > max_angular_acceleration * dt:
+        velocity = feedback_angular_velocity + max_angular_acceleration * dt
+    elif velocity - feedback_angular_velocity < -max_angular_acceleration * dt:
+        velocity = feedback_angular_velocity - max_angular_acceleration * dt
+
+    return velocity
