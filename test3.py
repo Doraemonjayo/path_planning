@@ -1,4 +1,4 @@
-import PathPlanner
+import PathPlanner2
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
@@ -22,9 +22,9 @@ def update(frame):
     v = path.calcVelocity(robot)
 
     arrow_v_forward.set_offsets(robot)
-    arrow_v_forward.set_UVC(*path.v_forward)
+    arrow_v_forward.set_UVC(*path.forwardVelocity)
     arrow_v_lateral.set_offsets(robot)
-    arrow_v_lateral.set_UVC(*path.v_lateral)
+    arrow_v_lateral.set_UVC(*path.lateralVelocity)
     arrow_v.set_offsets(robot)
     arrow_v.set_UVC(*v)
 
@@ -34,14 +34,15 @@ def update(frame):
 
     return arrow_v_forward, arrow_v_lateral, arrow_v, r
 
-path = PathPlanner.Path(((0,0),(10,0),(10,5),(0,5),(0,10),(10,10)), 5, 25)
+path = PathPlanner2.Path((((0, 0), 10), ((5, 0), 10), ((10, 5), 10), ((5, 10), 5), ((5, 5), 5), ((0, 10), 10), ((5, 15), 10), ((10, 15), 0)), 10, 100, 25)
+# path = PathPlanner2.Path((((0, 0), 10), ((10, 0), 10), ((10, 5), 10), ((0, 5), 10), ((0, 10), 10), ((10, 10), 0)), 10, 100, 25)
 
 x = []
 y = []
 
-for _path in path.path:
-    for t in np.arange(0, _path.length, 0.1):
-        p = _path.t_to_p(t)
+for _path in path.paths:
+    for t in np.arange(0, _path.duration, 0.01):
+        p = _path.timeToPoint(t)
         if p is not None:
             x.append(p[0])
             y.append(p[1])
@@ -52,9 +53,9 @@ fig, ax = plt.subplots()
 
 # グラフの描画
 ax.plot(x, y, 'r', lw = 2)
-arrow_v_forward = ax.quiver(0, 0, 1, 1, angles='xy', scale_units='xy', scale=1, color='r')
-arrow_v_lateral = ax.quiver(0, 0, 1, 1, angles='xy', scale_units='xy', scale=1, color='g')
-arrow_v = ax.quiver(0, 0, 1, 1, angles='xy', scale_units='xy', scale=1, color='b')
+arrow_v_forward = ax.quiver(0, 0, 1, 1, angles='xy', scale_units='xy', scale=1, color='r', alpha=0.5)
+arrow_v_lateral = ax.quiver(0, 0, 1, 1, angles='xy', scale_units='xy', scale=1, color='g', alpha=0.5)
+arrow_v = ax.quiver(0, 0, 1, 1, angles='xy', scale_units='xy', scale=1, color='b', alpha=0.5)
 r, = ax.plot(0, 0, 'k.', ms = 20)
 plt.xlabel("x")               # x軸のラベル
 plt.ylabel("y")               # y軸のラベル
