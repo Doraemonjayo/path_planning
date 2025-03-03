@@ -5,7 +5,7 @@ import numpy as np
 import platform
 
 dt = 0.02
-num_robots = 10  # ロボットの数
+num_robots = 100  # ロボットの数
 num_frames = 300  # 録画するフレーム数
 
 # 録画するかどうかのフラグ
@@ -32,21 +32,22 @@ def update(frame):
     for i, robot in enumerate(robots):
         v = path.calcVelocity(robot)
         robots[i] = (robot[0] + v[0] * dt, robot[1] + v[1] * dt)
-
+        
         # ロボットの位置を更新
-        robot_points[i].set_data(*robots[i])
+        robot_points[i].set_data(robots[i][0], robots[i][1])
 
     return robot_points
 
-path = PathPlanner.Path(((0, 0), (10, 0), (10, 5), (0, 5), (0, 10), (10, 10)), 10, 100)
+# path = PathPlanner3.Path((((0, 0), 10), ((10, 0), 10), ((10, 5), 10), ((0, 5), 10), ((0, 10), 10), ((10, 10), 0)), 10, 100, 50)
+path = PathPlanner.Path((((0, 0), 10, 0), ((10, 0), 10, 0), ((10, 5), 10, 0), ((0, 5), 10, 0), ((0, 10), 10, 0), ((10, 10), 0, 0)), 10, 100, 50)
 
 x = []
 y = []
 
 # Pathの全ての点を描画用に取得
-for _path in path.path:
-    for t in np.arange(0, _path.length, 0.1):
-        p = _path.t_to_p(t)
+for _path in path.paths:
+    for t in np.arange(0, _path.duration, 0.01):
+        p = _path.timeToPoint(t)
         if p is not None:
             x.append(p[0])
             y.append(p[1])
@@ -54,10 +55,12 @@ for _path in path.path:
 fig, ax = plt.subplots()
 
 # グラフの描画
+# ax.plot(x, y, 'r.', ms=1)
 ax.plot(x, y, 'r', lw=2)
 
 # 各ロボットの描画要素を初期化
 robot_points = [ax.plot(0, 0, 'k.', ms=10)[0] for _ in range(num_robots)]
+
 
 plt.xlabel("x")               # x軸のラベル
 plt.ylabel("y")               # y軸のラベル

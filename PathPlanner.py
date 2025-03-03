@@ -1,254 +1,257 @@
 import numpy as np
 
-# 直線パスを表すクラス
-class LinePath:
-    def __init__(self, p0: tuple[float, float], p1: tuple[float, float]) -> None:
-        """
-        初期化。2点を指定して直線を定義。
-        - p0: 始点の座標 (x, y)
-        - p1: 終点の座標 (x, y)
-        """
-        self.p0 = np.array(p0)  # 始点
-        self.p1 = np.array(p1)  # 終点
-        self.length = np.linalg.norm(self.p1 - self.p0)  # 線分の長さ
-        self.vec = (self.p1 - self.p0) / self.length  # 単位方向ベクトル
-
-    def t_to_p(self, t: float) -> tuple[float, float] | None:
-        """
-        パラメータ t に基づき位置を計算。
-        - t: 始点からの距離
-        - 戻り値: (x, y) 座標または None（範囲外の場合）
-        """
-        if 0 <= t <= self.length:
-            return tuple(self.p0 + t * self.vec)
-        else:
-            return None
+class StraightPath:
+    def __init__(self, startPoint : tuple[float, float], endPoint : tuple[float, float], startVelocity : float, endVelocity : float, angle : float) -> None:
         
-    def t_to_v(self, t: float) -> tuple[float, float] | None:
-        """
-        パラメータ t における速度ベクトル（方向）を計算。
-        - 戻り値: 単位ベクトルまたは None（範囲外の場合）
-        """
-        if 0 <= t <= self.length:
-            return tuple(self.vec)
-        else:
-            return None
+        self.angle = angle
+
+        self.startPoint = np.array(startPoint)
+        self.endPoint = np.array(endPoint)
+
+        self.startVelocity = startVelocity
+        self.endVelocity = endVelocity
         
-    def t_to_a(self, t: float) -> tuple[float, float] | None:
-        """
-        パラメータ t における加速度を計算（直線なので常に 0）。
-        - 戻り値: (0, 0) または None（範囲外の場合）
-        """
-        if 0 <= t <= self.length:
-            return (0, 0)
-        else:
-            return None
+        self.vector = self.endPoint - self.startPoint
+        self.length = float(np.linalg.norm(self.vector))
+        self.unitVector = self.vector / self.length
 
-    def prep(self, p: tuple[float, float]) -> float | None:
-        """
-        座標 p から直線上の最近接点までのパラメータ t を計算。
-        - p: 座標 (x, y)
-        - 戻り値: 最近接点のパラメータ t または None（範囲外の場合）
-        """
-        _p = np.array(p)
-        t = np.dot(_p - self.p0, self.vec)
-        if 0 <= t <= self.length:
-            return t
-        else:
-            return None
+        self.duration = 2 * self.length / (startVelocity + endVelocity)
+        self.acceleration = (endVelocity - startVelocity) / self.duration
 
-
-# 円弧パスを表すクラス
-class CirclePath:
-    def __init__(self, p0: tuple[float, float], theta0: float, theta1: float, r: float) -> None:
-        """
-        初期化。中心点、開始角度、終了角度、半径を指定して円弧を定義。
-        - p0: 円弧上の開始点
-        - theta0: 開始角度（ラジアン）
-        - theta1: 終了角度（ラジアン）
-        - r: 半径（正負で方向指定）
-        """
-        self.theta0 = theta0 % (2 * np.pi)  # 正規化された開始角度
-        theta = (theta1 - theta0 + np.pi) % (2 * np.pi) - np.pi  # 角度差（-π～π）
-        self.r = r if theta > 0 else -r  # 半径（方向に応じて符号を調整）
-        self.length = abs(self.r * theta)  # 円弧の長さ
-        # 円の中心座標を計算
-        self.o = np.array(p0) - self.r * np.array([np.sin(self.theta0), -np.cos(self.theta0)])
-
-    def t_to_p(self, t: float) -> tuple[float, float] | None:
-        """
-        パラメータ t に基づき位置を計算。
-        - t: 円弧上の長さ
-        - 戻り値: (x, y) 座標または None（範囲外の場合）
-        """
-        if 0 <= t <= self.length:
-            theta = t / self.r
-            return tuple(self.o + self.r * np.array([np.sin(self.theta0 + theta), -np.cos(self.theta0 + theta)]))
+    def pointToTime(self, point : tuple[float, float]) -> float | None:
+        n = (np.array(point) - self.startPoint).dot(self.unitVector)
+        if self.acceleration == 0:
+            time = n / self.startVelocity
         else:
-            return None
-        
-    def t_to_v(self, t: float) -> tuple[float, float] | None:
-        """
-        パラメータ t における速度ベクトル（方向）を計算。
-        - 戻り値: 単位ベクトルまたは None（範囲外の場合）
-        """
-        if 0 <= t <= self.length:
-            theta = t / self.r
-            return (np.cos(self.theta0 + theta), np.sin(self.theta0 + theta))
-        else:
-            return None
-
-    def t_to_a(self, t: float) -> tuple[float, float] | None:
-        """
-        パラメータ t における加速度を計算（円の曲率に基づく）。
-        - 戻り値: 加速度ベクトルまたは None（範囲外の場合）
-        """
-        if 0 <= t <= self.length:
-            theta = t / self.r
-            return (- np.sin(self.theta0 + theta) / self.r, np.cos(self.theta0 + theta) / self.r)
-        else:
-            return None
-
-    def prep(self, p: tuple[float, float]) -> float | None:
-        """
-        座標 p から円弧上の最近接点までのパラメータ t を計算。
-        - p: 座標 (x, y)
-        - 戻り値: 最近接点のパラメータ t または None（範囲外の場合）
-        """
-        _p = np.array(p)
-        theta = (np.arctan2(_p[1] - self.o[1], _p[0] - self.o[0]) + np.pi / 2 - self.theta0 + np.pi) % (2 * np.pi) - np.pi
-        t = theta * self.r
-        if 0 <= t <= self.length:
-            return t
-        else:
-            theta = (theta + np.pi + np.pi) % (2 * np.pi) - np.pi
-            t = theta * self.r
-            if 0 <= t <= self.length:
-                return t
+            if self.startVelocity**2 + 2 * self.acceleration * n >= 0:
+                time = (np.sqrt(self.startVelocity**2 + 2 * self.acceleration * n) - self.startVelocity) / self.acceleration
             else:
-                return None
-
-
-# 定点を表すクラス
-class PointPath:
-    def __init__(self, p: tuple[float, float], v: tuple[float, float]) -> None:
-        """
-        初期化。定点と方向を指定。
-        - p: 座標 (x, y)
-        - v: 方向ベクトル
-        """
-        self.p = np.array(p)  # 点の座標
-        self.length = 0  # 定点なので長さは常に 0
-        self.v = np.array(v) / np.linalg.norm(v)  # 単位方向ベクトル
-
-    def t_to_p(self, t: float) -> tuple[float, float] | None:
-        """
-        パラメータ t に基づき位置を返却。
-        - 戻り値: 点の座標または None（範囲外の場合）
-        """
-        if 0 <= t <= self.length:
-            return tuple(self.p)
+                time = -1
+        if 0 <= time <= self.duration:
+            return time
         else:
             return None
-
-    def t_to_a(self, t: float) -> tuple[float, float] | None:
-        """
-        加速度を計算（常に 0）。
-        - 戻り値: (0, 0)
-        """
-        if 0 <= t <= self.length:
-            return (0, 0)
+    
+    def timeToPoint(self, time : float) -> tuple[float, float] | None:
+        if 0 <= time <= self.duration:
+            return tuple(self.startPoint + self.unitVector * (self.startVelocity * time + 0.5 * self.acceleration * time**2))
         else:
             return None
-                
-    def t_to_v(self, t: float) -> tuple[float, float] | None:
-        """
-        方向ベクトルを返却。
-        - 戻り値: 方向ベクトル
-        """
-        if 0 <= t <= self.length:
-            return tuple(self.v)
+    
+    def timeToVelocity(self, time : float) -> tuple[float, float] | None:
+        if 0 <= time <= self.duration:
+            return tuple(self.unitVector * (self.startVelocity + self.acceleration * time))
+        else:
+            return None
+    
+    def timeToAcceleration(self, time : float) -> tuple[float, float] | None:
+        if 0 <= time <= self.duration:
+            return tuple(self.unitVector * self.acceleration)
         else:
             return None
         
-    def prep(self, p: tuple[float, float]) -> float | None:
-        """
-        定点なので t は常に 0 を返却。
-        """
+
+class CornerPath:
+    def __init__(self, cornerPoint : tuple[float, float], startVector : tuple[float, float], endVector : tuple[float, float], velocity : float, acceleration : float, angle : float) -> None:
+
+        self.angle = angle
+
+        self.cornerPoint = np.array(cornerPoint)
+        self.startVector = np.array(startVector)
+        self.endVector = np.array(endVector)
+        self.velocity = abs(velocity)
+        self.acceleration = abs(acceleration)
+
+        self.startAngle = np.arctan2(self.startVector[1], self.startVector[0])
+        self.endAngle = np.arctan2(self.endVector[1], self.endVector[0])
+        self.deltaAngle = (self.endAngle - self.startAngle + np.pi) % (2 * np.pi) - np.pi
+
+        self.radius = self.velocity**2 / self.acceleration
+        
+        if self.radius == 0:
+            self.duration = 0
+        else:
+            self.duration = self.deltaAngle * self.radius / self.velocity
+        if self.duration < 0:
+            self.duration = -self.duration
+            self.radius = -self.radius
+            # self.deltaAngle = -self.deltaAngle
+            # self.velocity = -self.velocity
+
+        self.cutLength = self.radius * np.tan(self.deltaAngle / 2)
+
+        self.centerPoint = self.cornerPoint + self.cutLength / np.cos(np.pi / 2 - self.deltaAngle / 2) * np.array((np.cos(self.startAngle + self.deltaAngle / 2 + np.pi / 2), np.sin(self.startAngle + self.deltaAngle / 2 + np.pi / 2)))
+        # print(1 / np.cos(self.deltaAngle / 2))
+        # self.centerPoint = self.cornerPoint - self.cutLength * startVector / np.linalg.norm(startVector) + self.radius * np.array((np.cos(self.startAngle + np.pi / 2), np.sin(self.startAngle + np.pi / 2)))
+
+        self.cutLength = abs(self.cutLength)
+
+        self.arcStartAngle = self.startAngle - np.pi / 2
+
+    def pointToTime(self, point : tuple[float, float]) -> float | None:
+        angle = np.arctan2(point[1] - self.centerPoint[1], point[0] - self.centerPoint[0]) - self.arcStartAngle
+        angle = (angle + np.pi) % (2 * np.pi) - np.pi
+        time = angle / self.deltaAngle * self.duration
+        if 0 <= time <= self.duration:
+            return time
+        angle += np.pi
+        angle = (angle + np.pi) % (2 * np.pi) - np.pi
+        time = angle / self.deltaAngle * self.duration
+        if 0 <= time <= self.duration:
+            return time
+        return None
+
+    def timeToPoint(self, time : float) -> tuple[float, float] | None:
+        if 0 <= time <= self.duration:
+            return tuple(self.centerPoint + self.radius * np.array((np.cos(self.arcStartAngle + time / self.duration * self.deltaAngle), np.sin(self.arcStartAngle + time / self.duration * self.deltaAngle))))
+        else:
+            return None
+        
+    def timeToVelocity(self, time : float) -> tuple[float, float] | None:
+        if 0 <= time <= self.duration:
+            return tuple(self.velocity * np.array((-np.sin(self.arcStartAngle + time / self.duration * self.deltaAngle), np.cos(self.arcStartAngle + time / self.duration * self.deltaAngle))))
+        else:
+            return None
+        
+    def timeToAcceleration(self, time : float) -> tuple[float, float] | None:
+        if 0 <= time <= self.duration:
+            return tuple(self.acceleration * np.array((-np.cos(self.arcStartAngle + time / self.duration * self.deltaAngle), -np.sin(self.arcStartAngle + time / self.duration * self.deltaAngle))))
+        else:
+            return None
+        
+class PointPath:
+    def __init__(self, point : tuple[float, float], velocity : tuple[float, float], angle : float) -> None:
+        self.angle = angle
+        self.point = np.array(point)
+        self.velocity = np.array(velocity)
+        self.duration = 0
+
+    def pointToTime(self, point : tuple[float, float]) -> float | None:
         return 0
-
+    
+    def timeToPoint(self, time : float) -> tuple[float, float] | None:
+        if 0 <= time <= self.duration:
+            return tuple(self.point)
+        else:
+            return None
+        
+    def timeToVelocity(self, time : float) -> tuple[float, float] | None:
+        if 0 <= time <= self.duration:
+            return tuple(self.velocity)
+        else:
+            return None
+        
+    def timeToAcceleration(self, time : float) -> tuple[float, float] | None:
+        if 0 <= time <= self.duration:
+            return (0, 0)
+        else:
+            return None
+        
 class Path:
-    def __init__(self, points: tuple[tuple[float, float], ...], vmax, amax):
-        self.points = np.array(points)
-        self.vmax = vmax
-        self.amax = amax
+    def __init__(self, pointsAndVelocities : tuple[tuple[tuple[float, float], float, float], ...], maxVelocity : float, maxAcceleration : float, maxLateralAcceleration : float) -> None:
+        """
+        Path
+        ----
+        
+        Path(
+            (((px, py), velocity, angle), ...),
+            maxVelocity,
+            maxAcceleration,
+            maxLateralAcceleration
+        )
+        
+        """
+        self.points = np.array([_[0] for _ in pointsAndVelocities])
+        self.velocities = np.array([_[1] for _ in pointsAndVelocities])
+        self.angles = np.array([_[2] for _ in pointsAndVelocities])
+        self.maxVelocity = maxVelocity
+        self.maxAcceleration = maxAcceleration
+        self.maxLateralAcceleration = maxLateralAcceleration
 
-        r = vmax**2 / amax
+        self.paths : list[StraightPath | CornerPath | PointPath] = []
 
-        self.total_t = 0
+        vector0 = self.points[1] - self.points[0]
+        vector0 = vector0 / np.linalg.norm(vector0)
+        vector1 = self.points[2] - self.points[1]
+        vector1 = vector1 / np.linalg.norm(vector1)
 
-        self.path = (PointPath(self.points[0], self.points[1] - self.points[0]),)
+        self.paths.append(PointPath(self.points[0], self.velocities[0] * vector0, self.angles[0]))
 
-        p0 = self.points[0]
+        cutLength0 = 0
+        corner = CornerPath(self.points[1], vector0, vector1, self.velocities[1], self.maxAcceleration, self.angles[1])
+        cutLength1 = corner.cutLength
+        self.paths.append(StraightPath(self.points[0] + cutLength0 * vector0, self.points[1] - cutLength1 * vector0, self.velocities[0], self.velocities[1], self.angles[1]))
+        self.paths.append(corner)
 
-        for i in range(self.points.shape[0] - 2):
-            vec0 = self.points[i + 1] - self.points[i]
-            vec0 = vec0 / np.linalg.norm(vec0)
-            vec1 = self.points[i + 2] - self.points[i + 1]
-            vec1 = vec1 / np.linalg.norm(vec1)
-            cos_theta = np.dot(vec0, vec1)
-            abs_tan_05theta = np.sqrt((1 - cos_theta) / (1 + cos_theta))
-            p1 = self.points[i + 1] - r * abs_tan_05theta * vec0
-            
-            self.path = self.path + (LinePath(p0, p1),CirclePath(p1, np.arctan2(vec0[1], vec0[0]), np.arctan2(vec1[1], vec1[0]), r),)
-            self.total_t += self.path[-2].length + self.path[-1].length
+        for i in range(2, self.points.shape[0] - 1):
+            vector0 = vector1
+            vector1 = self.points[i + 1] - self.points[i]
+            vector1 = vector1 / np.linalg.norm(vector1)
+            cutLength0 = cutLength1
+            corner = CornerPath(self.points[i], vector0, vector1, self.velocities[i], self.maxAcceleration, self.angles[i])
+            cutLength1 = corner.cutLength
+            self.paths.append(StraightPath(self.points[i - 1] + cutLength0 * vector0, self.points[i] - cutLength1 * vector0, self.velocities[i - 1], self.velocities[i], self.angles[i]))
+            self.paths.append(corner)
 
-            p0 = self.points[i + 1] + r * abs_tan_05theta * vec1
+        vector0 = vector1
+        self.paths.append(StraightPath(self.points[-2] + cutLength0 * vector0, self.points[-1], self.velocities[-2], self.velocities[-1], self.angles[-1]))
+        self.paths.append(PointPath(self.points[-1], self.velocities[-1] * vector0, self.angles[-1]))
 
-        p1 = self.points[-1]
-        self.path = self.path + (LinePath(p0, p1),)
-        self.total_t += self.path[-1].length
+        self.forwardVelocity = np.array((0, 0))
+        self.lateralVelocity = np.array((0, 0))
+        self.target_angle = 0
 
-        self.path = self.path + (PointPath(p1, p1 - p0),)
-
-        self.v_forward = np.array((0,0))
-        self.v_lateral = np.array((0,0))
-
-    def calcVelocity(self, point: tuple[float, float]) -> tuple[float, float]:
+    def calcVelocity(self, point : tuple[float, float]) -> tuple[float, float]:
         min_dist = np.inf
-        v_forward = np.array((0, 0))
-        total_length = 0
-        from_prep = 0
-        from_start = 0
-        from_end = 0
-        for path in self.path:
-            t = path.prep(point)
-            if t is not None:
-                p = path.t_to_p(t)
-                v = path.t_to_v(t)
-                if p is not None:
+        forwardVelocity = np.array((0, 0))
+        lateralVelocity = np.array((0, 0))
+        target_angle = 0
+        
+        for path in self.paths:
+            time = path.pointToTime(point)
+            if time is not None:
+                p = path.timeToPoint(time)
+                v = path.timeToVelocity(time)
+                if point is not None and v is not None:
                     dist = np.linalg.norm(np.array(point) - np.array(p))
                     if dist < min_dist:
                         min_dist = dist
-                        if v is not None:
-                            v_forward = np.array(v)
-                            v_lateral = np.array(p) - np.array(point)
-                            from_prep = np.linalg.norm(v_lateral)
-                            v_lateral = (v_lateral / from_prep) if from_prep != 0 else np.array((0,0))
-                            from_start = total_length + t
-                            from_end = self.total_t - from_start
+                        forwardVelocity = np.array(v)
+                        lateralVelocity = np.array(p) - np.array(point)
+                        lateralVelocity = (lateralVelocity / np.linalg.norm(lateralVelocity)) if np.linalg.norm(lateralVelocity) != 0 else np.array((0,0))
+                        target_angle = path.angle
 
-            total_length += path.length
+        lateralVelocity = lateralVelocity * min((self.maxVelocity, np.sqrt(2 * self.maxLateralAcceleration * min_dist)))
+        forwardVelocitySize = np.linalg.norm(forwardVelocity)
+        if forwardVelocitySize == 0:
+            forwardVelocity = np.array((0, 0))
+        else:
+            forwardVelocity = forwardVelocity / forwardVelocitySize * min((self.maxVelocity, forwardVelocitySize, np.sqrt(max((self.maxVelocity**2 - np.linalg.norm(lateralVelocity)**2, 0)))))
 
-        v_lateral = v_lateral * min((self.vmax, np.sqrt(0.5 * self.amax * from_prep)))
-        v_forward = v_forward * min((np.sqrt(max((self.vmax**2 - np.linalg.norm(v_lateral)**2, 0))), self.vmax, np.sqrt(2 * 0.5*self.amax * from_start), np.sqrt(2 * 0.5*self.amax * from_end)))
+        self.forwardVelocity = forwardVelocity
+        self.lateralVelocity = lateralVelocity
 
-        self.v_forward = v_forward
-        self.v_lateral = v_lateral
+        output = forwardVelocity + lateralVelocity
 
-        return tuple(v_forward + v_lateral)
+        self.target_angle = target_angle
 
-class Robot:
-    def __init__(self, points: tuple[tuple[float, float], ...], vmax, amax) -> None:
-        self.path = Path(points, vmax, amax)
-        self.vmaxes = np.array(((self.path.total_t,0),))
+        if np.linalg.norm(output) > self.maxVelocity:
+            output = output / np.linalg.norm(output) * self.maxVelocity
+
+        return tuple(output)
+    
+def calcAngularVelocity(target_angle : float, feedback_angle : float, feedback_angular_velocity : float, max_angular_velocity, max_angular_acceleration : float, dt : float) -> float:
+    delta_angle = target_angle - feedback_angle
+    delta_angle = (delta_angle + np.pi) % (2 * np.pi) - np.pi
+
+    if delta_angle > 0:
+        velocity = min((max_angular_velocity, np.sqrt(2 * (max_angular_acceleration / 4) * delta_angle)))
+    else:
+        velocity = -min((max_angular_velocity, np.sqrt(2 * (max_angular_acceleration / 4) * -delta_angle)))
+
+    if velocity - feedback_angular_velocity > max_angular_acceleration * dt:
+        velocity = feedback_angular_velocity + max_angular_acceleration * dt
+    elif velocity - feedback_angular_velocity < -max_angular_acceleration * dt:
+        velocity = feedback_angular_velocity - max_angular_acceleration * dt
+
+    return velocity
