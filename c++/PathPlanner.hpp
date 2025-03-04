@@ -12,6 +12,7 @@
 #ifndef PATH_PLANNER_HPP
 #define PATH_PLANNER_HPP
 
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <tuple>
 #include <vector>
@@ -20,7 +21,6 @@
 #include <array>
 #include <algorithm>
 #include <memory>
-#include <cmath>
 
 namespace PathPlanner
 {
