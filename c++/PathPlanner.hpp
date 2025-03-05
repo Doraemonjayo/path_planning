@@ -122,6 +122,7 @@ namespace PathPlanner
         Path(const std::vector<pointAndVelocity> &pointsAndVelocities, double maxVelocity, double maxAcceleration, double maxLateralAcceleration);
 
         Vector2d calcVelocity(const Vector2d &point);
+        double getTargetAngle() const;
 
     private:
 

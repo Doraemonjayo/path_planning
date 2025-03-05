@@ -357,6 +357,11 @@ namespace PathPlanner
         }
     }
 
+    double Path::getTargetAngle() const
+    {
+        return target_angle;
+    }
+
     double calcAngularVelocity(double target_angle, double feedback_angle, double feedback_angular_velocity, double max_angular_velocity, double max_angular_acceleration, double dt)
     {
         double delta_angle = target_angle - feedback_angle;
