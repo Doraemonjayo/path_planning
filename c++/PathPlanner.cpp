@@ -1,12 +1,12 @@
 /**
  * @file PathPlanner.cpp
- * @author Doraemonjayo 
- * @brief 
+ * @author Doraemonjayo
+ * @brief
  * @version 1.0
  * @date 2025-03-03
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #include "PathPlanner.hpp"
@@ -78,14 +78,14 @@ namespace PathPlanner
 
     // StraightPath implementation
     StraightPath::StraightPath(const Vector2d &startPoint, const Vector2d &endPoint, double startVelocity, double endVelocity, double angle)
-    : startPoint(startPoint), endPoint(endPoint), startVelocity(startVelocity), endVelocity(endVelocity), angle(angle) 
+        : startPoint(startPoint), endPoint(endPoint), startVelocity(startVelocity), endVelocity(endVelocity), angle(angle)
     {
         vector = endPoint - startPoint;
         length = vector.norm();
         unitVector = vector.normalized();
 
         duration = 2 * length / (startVelocity + endVelocity);
-        acceleration = (endVelocity * endVelocity) / duration;
+        acceleration = (endVelocity - startVelocity) / duration;
     }
 
     double StraightPath::pointToTime(const Vector2d &point) const
@@ -110,17 +110,21 @@ namespace PathPlanner
         if (0 <= time && time <= duration)
         {
             return time;
-        }else{
+        }
+        else
+        {
             return std::numeric_limits<double>::quiet_NaN();
-        }    
+        }
     }
-    
+
     Vector2d StraightPath::timeToPoint(double time) const
     {
         if (0 <= time && time <= duration)
         {
             return startPoint + unitVector * (startVelocity * time + 0.5 * acceleration * time * time);
-        }else{
+        }
+        else
+        {
             return Vector2d();
         }
     }
@@ -130,7 +134,9 @@ namespace PathPlanner
         if (0 <= time && time <= duration)
         {
             return unitVector * (startVelocity + acceleration * time);
-        }else{
+        }
+        else
+        {
             return Vector2d();
         }
     }
@@ -140,21 +146,23 @@ namespace PathPlanner
         if (0 <= time && time <= duration)
         {
             return unitVector * acceleration;
-        }else{
+        }
+        else
+        {
             return Vector2d();
         }
     }
 
     // CornerPath implementation
-    CornerPath::CornerPath(const Vector2d &cornerPoint, const Vector2d &startVector, const Vector2d &endVector,double velocity, double acceleration, double angle)
-    : cornerPoint(cornerPoint), startVector(startVector), endVector(endVector), velocity(std::abs(velocity)), acceleration(std::abs(acceleration)), angle(angle)
+    CornerPath::CornerPath(const Vector2d &cornerPoint, const Vector2d &startVector, const Vector2d &endVector, double velocity, double acceleration, double angle)
+        : cornerPoint(cornerPoint), startVector(startVector), endVector(endVector), velocity(std::abs(velocity)), acceleration(std::abs(acceleration)), angle(angle)
     {
         startAngle = std::atan2(startVector.y, startVector.x);
         endAngle = std::atan2(endVector.y, endVector.x);
         deltaAngle = positive_fmod(endAngle - startAngle + M_PI, 2 * M_PI) - M_PI;
 
         radius = velocity * velocity / acceleration;
-        
+
         if (radius == 0)
         {
             duration = 0;
@@ -230,7 +238,8 @@ namespace PathPlanner
 
     // PointPath implementation
     PointPath::PointPath(const Vector2d &point, const Vector2d &velocity, double angle)
-    : point(point), velocity(velocity), angle(angle) {
+        : point(point), velocity(velocity), angle(angle)
+    {
         duration = 0;
     }
 
@@ -244,7 +253,9 @@ namespace PathPlanner
         if (0 <= time && time <= duration)
         {
             return point;
-        }else{
+        }
+        else
+        {
             return Vector2d();
         }
     }
@@ -254,7 +265,9 @@ namespace PathPlanner
         if (0 <= time && time <= duration)
         {
             return velocity;
-        }else{
+        }
+        else
+        {
             return Vector2d();
         }
     }
@@ -264,7 +277,9 @@ namespace PathPlanner
         if (0 <= time && time <= duration)
         {
             return Vector2d(0, 0);
-        }else{
+        }
+        else
+        {
             return Vector2d();
         }
     }
@@ -305,7 +320,7 @@ namespace PathPlanner
         paths.push_back(std::make_unique<StraightPath>(points[points.size() - 2] + cutLength0 * vector0, points[points.size() - 1], velocities[points.size() - 2], velocities[points.size() - 1], angles[points.size() - 1]));
         paths.push_back(std::make_unique<PointPath>(points[points.size() - 1], velocities[points.size() - 1] * vector0, angles[points.size() - 1]));
     }
-    
+
     Vector2d Path::calcVelocity(const Vector2d &point)
     {
         double min_dist = std::numeric_limits<double>::infinity();
@@ -329,32 +344,32 @@ namespace PathPlanner
                     ta = path->getAngle();
                 }
             }
-
-            lv = lv * std::min(maxVelocity, std::sqrt(2 * maxLateralAcceleration * min_dist));
-            double fv_norm = fv.norm();
-            if (fv_norm == 0)
-            {
-                fv = Vector2d();
-            }
-            else
-            {
-                fv = fv / fv_norm * std::min(maxVelocity, std::min(fv_norm, std::sqrt(std::max(maxVelocity * maxVelocity - lv.norm() * lv.norm(), 0.0))));
-            }
-
-            forwardVelocity = fv;
-            lateralVelocity = lv;
-
-            Vector2d output = fv + lv;
-
-            target_angle = ta;
-
-            if (output.norm() > maxVelocity)
-            {
-                output = output.normalized() * maxVelocity;
-            }
-
-            return output;
         }
+
+        lv = lv * std::min(maxVelocity, std::sqrt(2 * maxLateralAcceleration * min_dist));
+        double fv_norm = fv.norm();
+        if (fv_norm == 0)
+        {
+            fv = Vector2d();
+        }
+        else
+        {
+            fv = fv / fv_norm * std::min(maxVelocity, std::min(fv_norm, std::sqrt(std::max(maxVelocity * maxVelocity - lv.norm() * lv.norm(), 0.0))));
+        }
+
+        forwardVelocity = fv;
+        lateralVelocity = lv;
+
+        Vector2d output = fv + lv;
+
+        target_angle = ta;
+
+        if (output.norm() > maxVelocity)
+        {
+            output = output.normalized() * maxVelocity;
+        }
+
+        return output;
     }
 
     double Path::getTargetAngle() const
