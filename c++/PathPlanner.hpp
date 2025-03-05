@@ -123,6 +123,7 @@ namespace PathPlanner
 
         Vector2d calcVelocity(const Vector2d &point);
         double getTargetAngle() const;
+        std::vector<std::unique_ptr<BasePath>>  getPaths() const;
 
     private:
 
@@ -138,7 +139,7 @@ namespace PathPlanner
         double target_angle = 0;
     };
 
-    double calcAngularVelocity(double current_angle, double target_angle, double max_angular_velocity);
+    double calcAngularVelocity(double target_angle, double feedback_angle, double feedback_angular_velocity, double max_angular_velocity, double max_angular_acceleration, double dt);
 }
 
 #endif // PATH_PLANNER_HPP

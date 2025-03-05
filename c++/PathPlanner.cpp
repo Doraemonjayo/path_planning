@@ -377,6 +377,11 @@ namespace PathPlanner
         return target_angle;
     }
 
+    std::vector<std::unique_ptr<BasePath>> Path::getPaths() const
+    {
+        return paths;
+    }
+
     double calcAngularVelocity(double target_angle, double feedback_angle, double feedback_angular_velocity, double max_angular_velocity, double max_angular_acceleration, double dt)
     {
         double delta_angle = target_angle - feedback_angle;
