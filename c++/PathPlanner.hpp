@@ -123,7 +123,7 @@ namespace PathPlanner
 
         Vector2d calcVelocity(const Vector2d &point);
         double getTargetAngle() const;
-        std::vector<std::unique_ptr<BasePath>>  getPaths() const;
+        const std::vector<std::unique_ptr<BasePath>>& getPaths() const;
 
     private:
 

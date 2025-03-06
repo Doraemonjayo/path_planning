@@ -377,7 +377,7 @@ namespace PathPlanner
         return target_angle;
     }
 
-    std::vector<std::unique_ptr<BasePath>> Path::getPaths() const
+    const std::vector<std::unique_ptr<BasePath>>& Path::getPaths() const
     {
         return paths;
     }
