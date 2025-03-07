@@ -317,6 +317,7 @@ namespace PathPlanner
         }
 
         vector0 = vector1;
+        cutLength0 = cutLength1;
         paths.push_back(std::make_unique<StraightPath>(points[points.size() - 2] + cutLength0 * vector0, points[points.size() - 1], velocities[points.size() - 2], velocities[points.size() - 1], angles[points.size() - 1]));
         paths.push_back(std::make_unique<PointPath>(points[points.size() - 1], velocities[points.size() - 1] * vector0, angles[points.size() - 1]));
     }
