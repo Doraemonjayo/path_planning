@@ -194,6 +194,7 @@ class Path:
             self.paths.append(corner)
 
         vector0 = vector1
+        cutLength0 = cutLength1
         self.paths.append(StraightPath(self.points[-2] + cutLength0 * vector0, self.points[-1], self.velocities[-2], self.velocities[-1], self.angles[-1]))
         self.paths.append(PointPath(self.points[-1], self.velocities[-1] * vector0, self.angles[-1]))
 
@@ -201,11 +202,15 @@ class Path:
         self.lateralVelocity = np.array((0, 0))
         self.target_angle = 0
 
+        self.goal_flag = False
+
     def calcVelocity(self, point : tuple[float, float]) -> tuple[float, float]:
         min_dist = np.inf
         forwardVelocity = np.array((0, 0))
         lateralVelocity = np.array((0, 0))
         target_angle = 0
+
+        self.goal_flag = False
         
         for path in self.paths:
             time = path.pointToTime(point)
@@ -220,6 +225,8 @@ class Path:
                         lateralVelocity = np.array(p) - np.array(point)
                         lateralVelocity = (lateralVelocity / np.linalg.norm(lateralVelocity)) if np.linalg.norm(lateralVelocity) != 0 else np.array((0,0))
                         target_angle = path.angle
+                        if path == self.paths[-1]:
+                            self.goal_flag = True
 
         lateralVelocity = lateralVelocity * min((self.maxVelocity, np.sqrt(2 * self.maxLateralAcceleration * min_dist)))
         forwardVelocitySize = np.linalg.norm(forwardVelocity)

@@ -58,7 +58,7 @@ angular_velocity = 0
 fig, ax = plt.subplots()
 
 # グラフの描画
-ax.plot(x, y, 'r', lw = 2)
+ax.plot(x, y, 'r.', ms = 1)
 arrow_v_forward = ax.quiver(0, 0, 1, 1, angles='xy', scale_units='xy', scale=1, color='r', alpha=0.5)
 arrow_v_lateral = ax.quiver(0, 0, 1, 1, angles='xy', scale_units='xy', scale=1, color='g', alpha=0.5)
 arrow_v = ax.quiver(0, 0, 1, 1, angles='xy', scale_units='xy', scale=1, color='b', alpha=0.5)
