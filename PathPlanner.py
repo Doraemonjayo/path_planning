@@ -162,6 +162,7 @@ class Path:
         
         """
         self.points = np.array([_[0] for _ in pointsAndVelocities])
+        self.goal_point = self.points[-1]
         self.velocities = np.array([_[1] for _ in pointsAndVelocities])
         self.angles = np.array([_[2] for _ in pointsAndVelocities])
         self.maxVelocity = maxVelocity
@@ -170,38 +171,35 @@ class Path:
 
         self.paths : list[StraightPath | CornerPath | PointPath] = []
 
-        vector0 = self.points[1] - self.points[0]
-        vector0 = vector0 / np.linalg.norm(vector0)
-        vector1 = self.points[2] - self.points[1]
+        vector1 = self.points[1] - self.points[0]
         vector1 = vector1 / np.linalg.norm(vector1)
 
-        self.paths.append(PointPath(self.points[0], self.velocities[0] * vector0, self.angles[0]))
+        cutLength1 = 0
 
-        cutLength0 = 0
-        corner = CornerPath(self.points[1], vector0, vector1, self.velocities[1], self.maxAcceleration, self.angles[1])
-        cutLength1 = corner.cutLength
-        self.paths.append(StraightPath(self.points[0] + cutLength0 * vector0, self.points[1] - cutLength1 * vector0, self.velocities[0], self.velocities[1], self.angles[1]))
-        self.paths.append(corner)
+        self.paths.append(PointPath(self.points[0], self.velocities[0] * vector1, self.angles[0]))
 
-        for i in range(2, self.points.shape[0] - 1):
+        for i in range(1, self.points.shape[0] - 1):
             vector0 = vector1
             vector1 = self.points[i + 1] - self.points[i]
             vector1 = vector1 / np.linalg.norm(vector1)
-            cutLength0 = cutLength1
+            
             corner = CornerPath(self.points[i], vector0, vector1, self.velocities[i], self.maxAcceleration, self.angles[i])
+            cutLength0 = cutLength1
             cutLength1 = corner.cutLength
+
             self.paths.append(StraightPath(self.points[i - 1] + cutLength0 * vector0, self.points[i] - cutLength1 * vector0, self.velocities[i - 1], self.velocities[i], self.angles[i]))
             self.paths.append(corner)
 
         vector0 = vector1
         cutLength0 = cutLength1
+        
         self.paths.append(StraightPath(self.points[-2] + cutLength0 * vector0, self.points[-1], self.velocities[-2], self.velocities[-1], self.angles[-1]))
         self.paths.append(PointPath(self.points[-1], self.velocities[-1] * vector0, self.angles[-1]))
 
         self.forwardVelocity = np.array((0, 0))
         self.lateralVelocity = np.array((0, 0))
-        self.target_angle = 0
-
+        self.target_angle = 0   
+        
         self.goal_flag = False
 
     def calcVelocity(self, point : tuple[float, float]) -> tuple[float, float]:
@@ -209,7 +207,6 @@ class Path:
         forwardVelocity = np.array((0, 0))
         lateralVelocity = np.array((0, 0))
         target_angle = 0
-
         self.goal_flag = False
         
         for path in self.paths:
